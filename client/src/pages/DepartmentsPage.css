@@ -1,0 +1,28 @@
+.departments-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.departments-page__content {
+  flex: 1;
+  padding: var(--space-4);
+  overflow-y: auto;
+}
+
+.dept-detail {
+  display: flex;
+  flex-direction: column;
+}
+
+.dept-detail__row {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-2) 0;
+  border-bottom: var(--border-width) solid var(--surface-alt);
+  font-size: var(--font-size-sm);
+}
+
+.dept-detail__label {
+  color: var(--text-secondary);
+}
