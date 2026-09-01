@@ -1,0 +1,45 @@
+{
+  "_comment": "Sentinel Camera Grid — Government Feed Configuration",
+  "_instructions": [
+    "OPTION A (recommended): Set env SENTINEL_BASE_URL=http://<sentinel-host> and the server will call GET /api/ingest automatically.",
+    "OPTION B: Replace the entries below with real Sentinel camera URLs from the Resources page. Then set USE_EXAMPLE_FEEDS=true OR copy this file to config/feeds.json.",
+    "OPTION C: Set env GOV_FEEDS_JSON with a JSON-stringified array of the same objects.",
+    "After updating, restart the server. The 'gov-feeds' system will appear in Federation Hub."
+  ],
+  "feeds": [
+    {
+      "externalId": "sentinel-cam-001",
+      "name": "Sentinel Camera — NH-48 Entry",
+      "lat": 23.0225,
+      "lng": 72.5714,
+      "status": "online",
+      "codec": "h264",
+      "fps": 25,
+      "resolution": "1920x1080",
+      "url": "https://placeholder.sentinel.gpic26.in/live/stream/cam-001/index.m3u8",
+      "protocol": "hls",
+      "urls": {
+        "hls": "https://placeholder.sentinel.gpic26.in/live/stream/cam-001/index.m3u8",
+        "rtsp": "rtsp://placeholder.sentinel.gpic26.in:8554/stream/cam-001",
+        "whep": "https://placeholder.sentinel.gpic26.in:8889/stream/cam-001/whep"
+      }
+    },
+    {
+      "externalId": "sentinel-cam-002",
+      "name": "Sentinel Camera — Sardar Bridge",
+      "lat": 23.0401,
+      "lng": 72.5720,
+      "status": "online",
+      "codec": "h265",
+      "fps": 30,
+      "resolution": "3840x2160",
+      "url": "https://placeholder.sentinel.gpic26.in/live/stream/cam-002/index.m3u8",
+      "protocol": "hls",
+      "urls": {
+        "hls": "https://placeholder.sentinel.gpic26.in/live/stream/cam-002/index.m3u8",
+        "rtsp": "rtsp://placeholder.sentinel.gpic26.in:8554/stream/cam-002",
+        "whep": "https://placeholder.sentinel.gpic26.in:8889/stream/cam-002/whep"
+      }
+    }
+  ]
+}

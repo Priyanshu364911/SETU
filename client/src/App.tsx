@@ -12,6 +12,12 @@ import HealthMonitorPage from './pages/HealthMonitorPage';
 import AuditTrailPage from './pages/AuditTrailPage';
 import APIDocsPage from './pages/APIDocsPage';
 import SettingsPage from './pages/SettingsPage';
+// Model 3 Federation pages
+import FederationPage from './pages/FederationPage';
+import CorrelationPage from './pages/CorrelationPage';
+import AdapterDocsPage from './pages/AdapterDocsPage';
+import WatchlistPage from './pages/WatchlistPage';
+import AlertsPage from './pages/AlertsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -41,6 +47,12 @@ function AppRoutes() {
         <Route path="/audit" element={<AuditTrailPage />} />
         <Route path="/registry-api-docs" element={<APIDocsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        {/* Model 3 Federation */}
+        <Route path="/federation" element={<FederationPage />} />
+        <Route path="/correlation" element={<CorrelationPage />} />
+        <Route path="/adapter-docs" element={<AdapterDocsPage />} />
+        <Route path="/watchlist" element={<WatchlistPage />} />
+        <Route path="/alerts" element={<AlertsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

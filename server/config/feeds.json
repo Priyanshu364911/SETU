@@ -1,0 +1,95 @@
+{
+  "_comment": "Sentinel Camera Grid — Connected to live.corp8.cloud",
+  "feeds": [
+    {
+      "externalId": "1",
+      "name": "Sentinel Grid — Camera 01 (Ahmedabad Highway Junction)",
+      "lat": 23.0338,
+      "lng": 72.5074,
+      "status": "online",
+      "codec": "h264",
+      "fps": 30,
+      "resolution": "1920x1080",
+      "url": "https://live.corp8.cloud/live/stream/1/index.m3u8",
+      "protocol": "hls",
+      "urls": {
+        "hls": "https://live.corp8.cloud/live/stream/1/index.m3u8",
+        "stream": "https://live.corp8.cloud/stream/1",
+        "rtsp": "rtsp://live.corp8.cloud:8554/stream/1",
+        "whep": "https://live.corp8.cloud:8889/stream/1/whep"
+      }
+    },
+    {
+      "externalId": "2",
+      "name": "Sentinel Grid — Camera 02 (Surat Ring Road Toll Plaza)",
+      "lat": 21.1702,
+      "lng": 72.8311,
+      "status": "online",
+      "codec": "h264",
+      "fps": 25,
+      "resolution": "1920x1080",
+      "url": "https://live.corp8.cloud/live/stream/2/index.m3u8",
+      "protocol": "hls",
+      "urls": {
+        "hls": "https://live.corp8.cloud/live/stream/2/index.m3u8",
+        "stream": "https://live.corp8.cloud/stream/2",
+        "rtsp": "rtsp://live.corp8.cloud:8554/stream/2",
+        "whep": "https://live.corp8.cloud:8889/stream/2/whep"
+      }
+    },
+    {
+      "externalId": "3",
+      "name": "Sentinel Grid — Camera 03 (Vadodara Express Highway)",
+      "lat": 22.3107,
+      "lng": 73.1926,
+      "status": "online",
+      "codec": "h265",
+      "fps": 30,
+      "resolution": "3840x2160",
+      "url": "https://live.corp8.cloud/live/stream/3/index.m3u8",
+      "protocol": "hls",
+      "urls": {
+        "hls": "https://live.corp8.cloud/live/stream/3/index.m3u8",
+        "stream": "https://live.corp8.cloud/stream/3",
+        "rtsp": "rtsp://live.corp8.cloud:8554/stream/3",
+        "whep": "https://live.corp8.cloud:8889/stream/3/whep"
+      }
+    },
+    {
+      "externalId": "4",
+      "name": "Sentinel Grid — Camera 04 (Gandhinagar CH Road Interchange)",
+      "lat": 23.2156,
+      "lng": 72.6369,
+      "status": "online",
+      "codec": "h264",
+      "fps": 30,
+      "resolution": "1920x1080",
+      "url": "https://live.corp8.cloud/live/stream/4/index.m3u8",
+      "protocol": "hls",
+      "urls": {
+        "hls": "https://live.corp8.cloud/live/stream/4/index.m3u8",
+        "stream": "https://live.corp8.cloud/stream/4",
+        "rtsp": "rtsp://live.corp8.cloud:8554/stream/4",
+        "whep": "https://live.corp8.cloud:8889/stream/4/whep"
+      }
+    },
+    {
+      "externalId": "5",
+      "name": "Sentinel Grid — Camera 05 (Rajkot Bypass Checkpoint)",
+      "lat": 22.3039,
+      "lng": 70.8022,
+      "status": "online",
+      "codec": "h264",
+      "fps": 25,
+      "resolution": "1920x1080",
+      "url": "https://live.corp8.cloud/live/stream/5/index.m3u8",
+      "protocol": "hls",
+      "urls": {
+        "hls": "https://live.corp8.cloud/live/stream/5/index.m3u8",
+        "stream": "https://live.corp8.cloud/stream/5",
+        "rtsp": "rtsp://live.corp8.cloud:8554/stream/5",
+        "whep": "https://live.corp8.cloud:8889/stream/5/whep"
+      }
+    }
+  ]
+}

@@ -1,0 +1,208 @@
+/* AdapterDocsPage.css */
+
+.adapter-docs {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.adapter-docs__header {
+  padding: var(--space-5) var(--space-6);
+  border-bottom: var(--border-width) solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.adapter-docs__title {
+  font-size: var(--font-size-heading);
+  font-weight: var(--font-weight-semibold);
+}
+
+.adapter-docs__subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.adapter-docs__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 900px;
+}
+
+/* ─── Section cards ─── */
+.doc-section {
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.doc-section__heading {
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-alt);
+  border-bottom: var(--border-width) solid var(--border);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.doc-section__body {
+  padding: var(--space-4);
+  font-size: var(--font-size-sm);
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.doc-section__body p { margin-bottom: var(--space-3); }
+.doc-section__body ul { padding-left: var(--space-4); }
+.doc-section__body li { margin-bottom: var(--space-1); }
+
+/* ─── Architecture diagram (text art) ─── */
+.arch-diagram {
+  background: #0f172a;
+  color: #94a3b8;
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  line-height: 1.8;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* ─── Adapter comparison ─── */
+.adapter-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+
+.adapter-card {
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.adapter-card__head {
+  background: var(--surface-alt);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.adapter-card__rows {
+  padding: var(--space-3);
+}
+
+.adapter-row {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  font-size: var(--font-size-xs);
+  border-bottom: var(--border-width) solid var(--surface-alt);
+}
+
+.adapter-row:last-child { border-bottom: none; }
+
+.adapter-row__key {
+  min-width: 120px;
+  color: var(--text-tertiary);
+}
+
+.adapter-row__val {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+/* ─── Interface contract ─── */
+.interface-block {
+  background: #0f172a;
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  line-height: 1.7;
+  overflow-x: auto;
+  margin-top: var(--space-3);
+}
+
+.token-keyword { color: #93c5fd; }
+.token-type { color: #86efac; }
+.token-method { color: #fde68a; }
+.token-comment { color: #64748b; }
+
+/* ─── Canonical event schema ─── */
+.schema-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-xs);
+}
+
+.schema-table th {
+  background: var(--surface-alt);
+  padding: 6px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.schema-table td {
+  padding: 6px 12px;
+  border-bottom: var(--border-width) solid var(--surface-alt);
+  color: var(--text-primary);
+  vertical-align: top;
+}
+
+.schema-table td:first-child {
+  font-family: var(--font-mono);
+  color: var(--accent);
+}
+
+.schema-table td:nth-child(2) {
+  font-family: var(--font-mono);
+  color: var(--status-online);
+}
+
+/* ─── Doc Links (Phase 5) ─── */
+.adapter-doc-link-card {
+  background: var(--surface);
+  border: 1px solid var(--surface-alt);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--accent);
+}
+
+.adapter-doc-link-card__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.adapter-doc-link-card__desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+
+.adapter-doc-link-card__path {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}

@@ -1,9 +1,12 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useEffect, useState } from 'react';
 import {
   Map, Database, Upload, BarChart3, Building2, Activity,
-  FileText, BookOpen, Settings, LogOut
+  FileText, BookOpen, Settings, LogOut, Network, GitMerge, BookOpenCheck,
+  Shield, Bell
 } from 'lucide-react';
+import { federationApi } from '../api';
 import './LeftNav.css';
 
 const NAV_ITEMS = [
@@ -24,8 +27,30 @@ const NAV_ITEMS = [
   ]},
 ];
 
+// Federation nav items are rendered separately to support the alert badge
+const FED_ITEMS = [
+  { to: '/federation', icon: Network, label: 'Federation Hub', badge: false },
+  { to: '/correlation', icon: GitMerge, label: 'Event Correlation', badge: false },
+  { to: '/watchlist', icon: Shield, label: 'Watchlist', badge: false },
+  { to: '/alerts', icon: Bell, label: 'Alerts', badge: true },
+  { to: '/adapter-docs', icon: BookOpenCheck, label: 'Adapter Docs', badge: false },
+];
+
 export default function LeftNav() {
   const { user, logout } = useAuth();
+  const [openAlerts, setOpenAlerts] = useState(0);
+
+  useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const data = await federationApi.getAlertCount();
+        setOpenAlerts(data.open ?? 0);
+      } catch (_) {}
+    };
+    void fetchCount();
+    const interval = setInterval(() => void fetchCount(), 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <nav className="left-nav" id="left-nav">
@@ -61,6 +86,29 @@ export default function LeftNav() {
               ))}
           </div>
         ))}
+
+        {/* Federation section — separate for badge support */}
+        <div className="left-nav__section">
+          <div className="left-nav__section-label">Federation</div>
+          {FED_ITEMS.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `left-nav__item ${isActive ? 'left-nav__item--active' : ''}`
+              }
+              id={`nav-${item.to.replace(/\//g, '')}`}
+            >
+              <item.icon size={16} strokeWidth={1.75} />
+              <span style={{ flex: 1 }}>{item.label}</span>
+              {item.badge && openAlerts > 0 && (
+                <span className="left-nav__badge" id="nav-alert-badge">
+                  {openAlerts > 99 ? '99+' : openAlerts}
+                </span>
+              )}
+            </NavLink>
+          ))}
+        </div>
       </div>
 
       <div className="left-nav__footer">
@@ -82,3 +130,4 @@ export default function LeftNav() {
     </nav>
   );
 }
+

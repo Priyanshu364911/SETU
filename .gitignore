@@ -34,6 +34,7 @@ coverage/
 *.lcov
 
 # Editor & System Files
+.cursor/
 .DS_Store
 Thumbs.db
 Desktop.ini

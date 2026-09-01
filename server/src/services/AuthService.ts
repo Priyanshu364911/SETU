@@ -3,8 +3,8 @@ import jwt from 'jsonwebtoken';
 import { query } from '../db';
 import { TokenPayload, AuthResult, UserProfile, Role } from '../types';
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
+const JWT_SECRET = process.env.JWT_SECRET!;
+if (!process.env.JWT_SECRET) {
   console.error('FATAL: JWT_SECRET environment variable is not set. Refusing to start.');
   process.exit(1);
 }
