@@ -18,6 +18,9 @@ import CorrelationPage from './pages/CorrelationPage';
 import AdapterDocsPage from './pages/AdapterDocsPage';
 import WatchlistPage from './pages/WatchlistPage';
 import AlertsPage from './pages/AlertsPage';
+// Model 2 Viewing & Metadata Analytics pages
+import LiveViewPage from './pages/LiveViewPage';
+import VehicleSearchPage from './pages/VehicleSearchPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -39,6 +42,10 @@ function AppRoutes() {
         </ProtectedRoute>
       }>
         <Route path="/" element={<GISPage />} />
+        {/* Model 2 Live Operations */}
+        <Route path="/live-view" element={<LiveViewPage />} />
+        <Route path="/vehicle-search" element={<VehicleSearchPage />} />
+
         <Route path="/cameras" element={<RegistryPage />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/gap-analysis" element={<GapAnalysisPage />} />

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Camera, Zap } from 'lucide-react';
 import Hls from 'hls.js';
-import { federationApi } from '../api';
+import { model2Api } from '../api';
 
 interface CctvLivePlayerProps {
   cameraId: string;
@@ -316,10 +316,13 @@ export default function CctvLivePlayer({
   const handleQuickInject = async () => {
     setInjecting(true);
     try {
-      await federationApi.detectPlate({
+      // Use Model 2 endpoint so the detection is written to detection_events
+      // (which also triggers the Model 3 watchlist/alert pipeline internally)
+      await model2Api.detectPlate({
         camera_id: cameraId,
         plate: 'GJ01WL0001',
         confidence: 0.98,
+        source: 'simulation',
       });
       alert(`Plate GJ01WL0001 injected successfully through camera ${cameraId}! Check Alerts.`);
     } catch (err: any) {

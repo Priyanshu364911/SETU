@@ -147,5 +147,31 @@ export const federationApi = {
     api.post(`/federation/alerts/${id}/close`).then((r) => r.data),
 };
 
+// ─── Model 2 API helpers (Unified Viewing & Metadata Analytics) ─────────────
+
+export const model2Api = {
+  /** Get live feeds formatted for Model 2 Unified Viewer */
+  getLiveFeeds: () => api.get('/model2/live-feeds').then((r) => r.data.data),
+
+  /** Operator manual event tag */
+  tagEvent: (data: { camera_id: string; note: string; snapshot_url?: string }) =>
+    api.post('/model2/events/tag', data).then((r) => r.data),
+
+  /** Get list of tagged events */
+  getTaggedEvents: (cameraId?: string, limit = 50) =>
+    api.get('/model2/events/tagged', { params: { cameraId, limit } }).then((r) => r.data.data),
+
+  /** Post ANPR detection event */
+  detectPlate: (data: { camera_id: string; plate: string; confidence?: number; snapshot_url?: string; source?: string }) =>
+    api.post('/model2/anpr/detect', data).then((r) => r.data),
+
+  /** Vehicle search by plate number (with GIS movement path) */
+  searchVehicle: (plate: string, limit = 100) =>
+    api.get('/model2/vehicle-search', { params: { plate, limit } }).then((r) => r.data),
+
+  /** Model 2 stats */
+  getStats: () => api.get('/model2/stats').then((r) => r.data),
+};
+
 export default api;
 

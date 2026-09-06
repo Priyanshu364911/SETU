@@ -26,7 +26,12 @@ export type AuditAction =
   | 'EXPORT'
   | 'LOGIN'
   | 'USER_CREATE'
-  | 'USER_UPDATE';
+  | 'USER_UPDATE'
+  | 'MODEL2_EVENT_TAGGED'
+  | 'MODEL2_VEHICLE_SEARCH'
+  | 'MODEL2_ANPR_DETECT'
+  | 'MODEL2_WATCHLIST_UPDATE'
+  | 'MODEL2_ALERT_ACTION';
 
 export type Resource = 'cameras' | 'users' | 'audit_log' | 'departments' | 'onboarding';
 

@@ -53,10 +53,10 @@ async function seed() {
     console.log('Seeding districts...');
     for (const dist of districts) {
       await client.query(
-        `INSERT INTO districts (id, name, centroid, region) 
-         VALUES ($1, $2, ST_SetSRID(ST_MakePoint($3, $4), 4326), $5) 
+        `INSERT INTO districts (id, name, centroid_lat, centroid_lng, region) 
+         VALUES ($1, $2, $3, $4, $5) 
          ON CONFLICT (id) DO NOTHING`,
-        [dist.id, dist.name, dist.centroid_lng, dist.centroid_lat, dist.region]
+        [dist.id, dist.name, dist.centroid_lat, dist.centroid_lng, dist.region]
       );
     }
     
@@ -96,13 +96,14 @@ async function seed() {
     for (const cam of sentinelCameras) {
       await client.query(
         `INSERT INTO cameras 
-         (id, name, department_id, district_id, location, camera_type, connectivity, storage_type, 
+         (id, name, department_id, district_id, latitude, longitude, camera_type, connectivity, storage_type, 
           retention_days, ownership, status, onboarding_status, onboarding_method, onboarded_by, 
           last_verified_at, notes)
-         VALUES ($1, $2, $3, $4, ST_SetSRID(ST_MakePoint($5, $6), 4326), $7, 'Fiber', 'Cloud', 30, 'Govt', 'Online', 'Approved', 'API', $8, NOW(), 'Official Sentinel Camera Grid Feed')
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'Fiber', 'Cloud', 30, 'Govt', 'Online', 'Approved', 'API', $8, NOW(), 'Official Sentinel Camera Grid Feed')
          ON CONFLICT (id) DO UPDATE SET
            name = EXCLUDED.name,
-           location = EXCLUDED.location,
+           latitude = EXCLUDED.latitude,
+           longitude = EXCLUDED.longitude,
            status = 'Online',
            onboarding_status = 'Approved'`,
         [
@@ -110,8 +111,8 @@ async function seed() {
           cam.name,
           cam.dept,
           cam.dist,
-          cam.lng,
           cam.lat,
+          cam.lng,
           cam.type,
           userIds['field_officer'] || null,
         ]

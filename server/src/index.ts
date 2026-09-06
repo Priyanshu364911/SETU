@@ -16,6 +16,7 @@ import departmentRoutes from './routes/departments';
 import userRoutes from './routes/users';
 import federationRoutes from './routes/federation';
 import streamProxyRoutes from './routes/streamProxy';
+import model2Routes from './routes/model2';
 
 // VMS Simulators (Model 3 — departmental VMS heterogeneity demo)
 import vmsARouter from './federation/simulators/vmsA';
@@ -50,7 +51,7 @@ app.use(helmet({
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_ORIGIN || 'http://localhost:5173',
+  origin: true,
   credentials: true,
 }));
 
@@ -90,6 +91,9 @@ app.use('/api/users', userRoutes);
 
 // ─── Model 3 Federation northbound API ───────────────────────────────────────
 app.use('/api/federation', federationRoutes);
+
+// ─── Model 2 Unified Viewing & Metadata Analytics API ────────────────────────
+app.use('/api/model2', model2Routes);
 
 // Health check endpoint
 app.get('/health', (_req, res) => {

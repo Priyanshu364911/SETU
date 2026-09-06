@@ -4,7 +4,8 @@ CREATE TABLE IF NOT EXISTS cameras (
     name                VARCHAR(200) NOT NULL,
     department_id       VARCHAR(10) NOT NULL REFERENCES departments(id),
     district_id         VARCHAR(10) NOT NULL REFERENCES districts(id),
-    location            GEOMETRY(POINT, 4326) NOT NULL,
+    latitude            NUMERIC(10, 8) NOT NULL,
+    longitude           NUMERIC(11, 8) NOT NULL,
     camera_type         VARCHAR(20) NOT NULL CHECK (camera_type IN ('IP','Analog','PTZ','ANPR')),
     connectivity        VARCHAR(20) NOT NULL CHECK (connectivity IN ('Fiber','4G','Microwave','Other')),
     storage_type        VARCHAR(20) NOT NULL CHECK (storage_type IN ('Local NVR','Cloud','Hybrid')),
@@ -23,8 +24,8 @@ CREATE TABLE IF NOT EXISTS cameras (
     updated_at          TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Spatial index for GIS queries
-CREATE INDEX IF NOT EXISTS idx_cameras_location ON cameras USING GIST(location);
+-- Index for GIS queries
+CREATE INDEX IF NOT EXISTS idx_cameras_lat_lng ON cameras(latitude, longitude);
 
 -- Composite index for common filter patterns
 CREATE INDEX IF NOT EXISTS idx_cameras_dept_status ON cameras(department_id, status);

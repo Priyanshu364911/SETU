@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   Map, Database, Upload, BarChart3, Building2, Activity,
   FileText, BookOpen, Settings, LogOut, Network, GitMerge, BookOpenCheck,
-  Shield, Bell
+  Shield, Bell, Tv, Search
 } from 'lucide-react';
 import { federationApi } from '../api';
 import './LeftNav.css';
@@ -12,6 +12,10 @@ import './LeftNav.css';
 const NAV_ITEMS = [
   { label: 'Overview', items: [
     { to: '/', icon: Map, label: 'GIS Dashboard' },
+  ]},
+  { label: 'Live Operations', items: [
+    { to: '/live-view', icon: Tv, label: 'Live View' },
+    { to: '/vehicle-search', icon: Search, label: 'Vehicle Search' },
   ]},
   { label: 'Registry', items: [
     { to: '/cameras', icon: Database, label: 'Camera Registry' },

@@ -6,7 +6,7 @@ export class AuditService {
     action: AuditAction,
     actor: TokenPayload,
     targetId: string | null,
-    targetType: 'camera' | 'user' | null,
+    targetType: string | null,
     beforeState: object | null,
     afterState: object | null,
     metadata: object | null,
