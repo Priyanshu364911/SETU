@@ -9,6 +9,7 @@ interface CctvLivePlayerProps {
   vmsSystemId?: string;
   streamUrl?: string;
   protocol?: string;
+  connectDelayMs?: number;
 }
 
 type StreamMode = 'webrtc' | 'hls' | 'canvas';
@@ -33,6 +34,7 @@ export default function CctvLivePlayer({
   cameraId,
   cameraName = 'Sentinel Surveillance Checkpoint',
   streamUrl = '',
+  connectDelayMs = 0,
 }: CctvLivePlayerProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -40,19 +42,22 @@ export default function CctvLivePlayer({
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
 
   // Extract clean camId (e.g. cam01)
-  const camId = cameraId.startsWith('GJ-') ? (streamUrl.match(/cam\d+/i)?.[0] || 'cam01') : cameraId;
+  const camId = (cameraId.startsWith('GJ-') ? (streamUrl.match(/cam\d+/i)?.[0] || 'cam01') : (cameraId.match(/cam\d+/i)?.[0] || cameraId)).toLowerCase();
 
-  // Stream endpoints
-  const whepEndpoint = `http://103.250.160.189:8889/stream/${camId}/whep`;
+  // Stream endpoints — WHEP proxied through our server to avoid CORS
+  const whepEndpoint = `/api/stream/sentinel/${camId}/whep`;
   const hlsEndpoint = `/api/stream/sentinel/${camId}/index.m3u8`;
 
-  // Start with WebRTC for ultra-low latency, with automatic HLS fallback
-  const [streamMode, setStreamMode] = useState<StreamMode>('webrtc');
-  const [activeProtocol, setActiveProtocol] = useState<'webrtc' | 'hls' | 'sim'>('webrtc');
+  // Start with HLS proxy for reliable, immediate playback
+  const [streamMode, setStreamMode] = useState<StreamMode>('hls');
+  const [activeProtocol, setActiveProtocol] = useState<'webrtc' | 'hls' | 'sim'>('hls');
   const [status, setStatus] = useState<'connecting' | 'playing' | 'fallback' | 'error'>('connecting');
   const [injecting, setInjecting] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('en-IN', { hour12: false }));
-  const [latencyText, setLatencyText] = useState('<200ms (Real-Time)');
+  const [latencyText, setLatencyText] = useState('~2.0s (Proxied HLS)');
+
+  const isCleaningUpRef = useRef(false);
+  const trackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Live time ticker
   useEffect(() => {
@@ -64,18 +69,39 @@ export default function CctvLivePlayer({
 
   // Cleanup helper
   const cleanUpStreams = () => {
+    isCleaningUpRef.current = true;
+    if (trackTimeoutRef.current) {
+      clearTimeout(trackTimeoutRef.current);
+      trackTimeoutRef.current = null;
+    }
     if (peerConnectionRef.current) {
-      peerConnectionRef.current.close();
+      try {
+        peerConnectionRef.current.close();
+      } catch {
+        // ignore
+      }
       peerConnectionRef.current = null;
     }
     if (hlsRef.current) {
-      hlsRef.current.destroy();
+      try {
+        hlsRef.current.destroy();
+      } catch {
+        // ignore
+      }
       hlsRef.current = null;
     }
     if (videoRef.current) {
       videoRef.current.srcObject = null;
-      videoRef.current.src = '';
+      videoRef.current.removeAttribute('src');
+      try {
+        videoRef.current.load();
+      } catch {
+        // ignore
+      }
     }
+    setTimeout(() => {
+      isCleaningUpRef.current = false;
+    }, 150);
   };
 
   // ─── Attach WebRTC WHEP ──────────────────────────────────────────────────
@@ -97,6 +123,10 @@ export default function CctvLivePlayer({
       pc.addTransceiver('video', { direction: 'recvonly' });
 
       pc.ontrack = (event) => {
+        if (trackTimeoutRef.current) {
+          clearTimeout(trackTimeoutRef.current);
+          trackTimeoutRef.current = null;
+        }
         if (videoRef.current && event.streams[0]) {
           videoRef.current.srcObject = event.streams[0];
           videoRef.current.play().catch(() => {});
@@ -110,11 +140,13 @@ export default function CctvLivePlayer({
       await pc.setLocalDescription(offer);
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout before HLS fallback
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
 
       const res = await fetch(whepEndpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/sdp' },
+        headers: {
+          'Content-Type': 'application/sdp',
+        },
         body: pc.localDescription?.sdp,
         signal: controller.signal,
       });
@@ -123,7 +155,14 @@ export default function CctvLivePlayer({
       if (res.ok) {
         const answerSdp = await res.text();
         await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
-        setStatus('playing');
+        
+        // Track arrival safety timer (5s)
+        trackTimeoutRef.current = setTimeout(() => {
+          if (peerConnectionRef.current === pc && status !== 'playing') {
+            console.warn(`[CctvLivePlayer] WebRTC track timeout on ${camId}, falling back to HLS`);
+            startHLS();
+          }
+        }, 5000);
       } else {
         console.warn(`[CctvLivePlayer] WebRTC WHEP returned HTTP ${res.status}, falling back to HLS`);
         startHLS();
@@ -148,7 +187,16 @@ export default function CctvLivePlayer({
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
-        backBufferLength: 60,
+        backBufferLength: 20,
+        maxBufferLength: 6,
+        maxMaxBufferLength: 12,
+        maxBufferSize: 25 * 1000 * 1000,
+        startFragPrefetch: true,
+        initialLiveManifestSize: 1,
+        manifestLoadingTimeOut: 15000,
+        manifestLoadingMaxRetry: 3,
+        levelLoadingTimeOut: 15000,
+        fragLoadingTimeOut: 25000,
       });
       hlsRef.current = hls;
 
@@ -163,7 +211,20 @@ export default function CctvLivePlayer({
       hls.on(Hls.Events.ERROR, (_e, data) => {
         if (data.fatal) {
           console.warn('[CctvLivePlayer] Fatal HLS error:', data.type);
-          setStatus('error');
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              console.warn('[CctvLivePlayer] Trying to recover network error...');
+              hls.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              console.warn('[CctvLivePlayer] Trying to recover media error...');
+              hls.recoverMediaError();
+              break;
+            default:
+              cleanUpStreams();
+              setStatus('error');
+              break;
+          }
         }
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -172,27 +233,46 @@ export default function CctvLivePlayer({
         video.play().catch(() => {});
         setStatus('playing');
       };
-      video.onerror = () => setStatus('error');
+      video.onerror = () => {
+        if (!isCleaningUpRef.current) setStatus('error');
+      };
     } else {
       setStatus('error');
     }
   };
 
-  // ─── Stream lifecycle ────────────────────────────────────────────────────
-  useEffect(() => {
-    if (streamMode === 'webrtc') {
+  // ─── Explicit Mode Switcher (Always fires, even if mode unchanged) ────────
+  const switchMode = (mode: StreamMode) => {
+    setStreamMode(mode);
+    if (mode === 'webrtc') {
       void startWebRTC();
-    } else if (streamMode === 'hls') {
+    } else if (mode === 'hls') {
       startHLS();
     } else {
       cleanUpStreams();
       setActiveProtocol('sim');
+      setStatus('playing');
+      setLatencyText('Local AI Sim');
+    }
+  };
+
+  // ─── Stream lifecycle (supports staggered startup delay) ──────────────────
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    if (connectDelayMs > 0) {
+      setStatus('connecting');
+      timer = setTimeout(() => {
+        switchMode(streamMode);
+      }, connectDelayMs);
+    } else {
+      switchMode(streamMode);
     }
 
     return () => {
+      if (timer) clearTimeout(timer);
       cleanUpStreams();
     };
-  }, [streamMode, camId]);
+  }, [camId, connectDelayMs]);
 
   // ─── Canvas Animation Loop (AI Simulation Mode) ──────────────────────────
   useEffect(() => {
@@ -406,16 +486,24 @@ export default function CctvLivePlayer({
           <div style={{ width: '100%', height: '100%', position: 'relative' }}>
             <video
               ref={videoRef}
-              controls
+              controls={status === 'playing'}
               autoPlay
               muted
               playsInline
-              style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#000' }}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                background: '#000',
+                display: status === 'error' ? 'none' : 'block',
+              }}
               onPlaying={() => setStatus('playing')}
               onLoadedData={() => setStatus('playing')}
               onError={() => {
+                if (isCleaningUpRef.current) return;
+                console.warn('[CctvLivePlayer] Video element error on', camId);
                 if (streamMode === 'webrtc') {
-                  startHLS();
+                  switchMode('hls');
                 } else {
                   setStatus('error');
                 }
@@ -434,6 +522,7 @@ export default function CctvLivePlayer({
                   color: '#94a3b8',
                   gap: '8px',
                   zIndex: 10,
+                  pointerEvents: 'none',
                 }}
               >
                 <div style={{ width: 28, height: 28, border: '2px solid #1e2a3b', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
@@ -449,26 +538,54 @@ export default function CctvLivePlayer({
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  background: 'rgba(15, 23, 42, 0.95)',
+                  background: 'rgba(15, 23, 42, 0.96)',
                   color: '#94a3b8',
                   padding: '20px',
                   textAlign: 'center',
-                  zIndex: 15,
+                  zIndex: 30,
+                  pointerEvents: 'auto',
                 }}
               >
                 <Camera size={32} style={{ marginBottom: '8px', color: '#f59e0b' }} />
                 <div style={{ fontSize: '13px', fontWeight: 600, color: '#f8fafc' }}>
-                  Stream Standby
+                  Stream Standby ({camId.toUpperCase()})
                 </div>
                 <div style={{ fontSize: '11px', marginTop: '4px', maxWidth: '380px', color: '#cbd5e1' }}>
-                  HLS proxy and WebRTC endpoints are ready. You can toggle protocols below.
+                  Feed connection standby. You can retry HLS proxy, toggle WebRTC, or view simulated ANPR feed.
                 </div>
-                <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                  <button className="btn-sm btn-sm--primary" onClick={startHLS} style={{ fontSize: '11px' }}>
-                    Retry HLS
+                <div style={{ display: 'flex', gap: '8px', marginTop: '14px', zIndex: 40 }}>
+                  <button
+                    type="button"
+                    className="btn-sm btn-sm--primary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      switchMode('hls');
+                    }}
+                    style={{ fontSize: '11px', cursor: 'pointer', padding: '6px 14px' }}
+                  >
+                    📺 Retry HLS
                   </button>
-                  <button className="btn-sm btn-sm--ghost" onClick={() => setStreamMode('canvas')} style={{ fontSize: '11px' }}>
-                    View Simulation
+                  <button
+                    type="button"
+                    className="btn-sm btn-sm--ghost"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      switchMode('webrtc');
+                    }}
+                    style={{ fontSize: '11px', cursor: 'pointer', padding: '6px 14px', border: '1px solid var(--border)', background: 'var(--surface)' }}
+                  >
+                    ⚡ Try WebRTC
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-sm btn-sm--ghost"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      switchMode('canvas');
+                    }}
+                    style={{ fontSize: '11px', cursor: 'pointer', padding: '6px 14px', border: '1px solid var(--border)', background: 'var(--surface)' }}
+                  >
+                    🤖 View Simulation
                   </button>
                 </div>
               </div>
@@ -504,25 +621,28 @@ export default function CctvLivePlayer({
             Protocol:
           </span>
           <button
+            type="button"
             className={`btn-sm ${streamMode === 'webrtc' ? 'btn-sm--primary' : 'btn-sm--ghost'}`}
-            onClick={() => setStreamMode('webrtc')}
-            style={{ fontSize: '11px', padding: '2px 8px' }}
+            onClick={() => switchMode('webrtc')}
+            style={{ fontSize: '11px', padding: '3px 10px', cursor: 'pointer' }}
             title="WebRTC (WHEP) for real-time sub-200ms latency"
           >
             ⚡ WebRTC (&lt;200ms)
           </button>
           <button
+            type="button"
             className={`btn-sm ${streamMode === 'hls' ? 'btn-sm--primary' : 'btn-sm--ghost'}`}
-            onClick={() => setStreamMode('hls')}
-            style={{ fontSize: '11px', padding: '2px 8px' }}
+            onClick={() => switchMode('hls')}
+            style={{ fontSize: '11px', padding: '3px 10px', cursor: 'pointer' }}
             title="HLS via secure backend proxy"
           >
             📺 HLS Proxy
           </button>
           <button
+            type="button"
             className={`btn-sm ${streamMode === 'canvas' ? 'btn-sm--primary' : 'btn-sm--ghost'}`}
-            onClick={() => setStreamMode('canvas')}
-            style={{ fontSize: '11px', padding: '2px 8px' }}
+            onClick={() => switchMode('canvas')}
+            style={{ fontSize: '11px', padding: '3px 10px', cursor: 'pointer' }}
             title="AI Detection Simulation"
           >
             🤖 AI Sim

@@ -17,6 +17,7 @@ import userRoutes from './routes/users';
 import federationRoutes from './routes/federation';
 import streamProxyRoutes from './routes/streamProxy';
 import model2Routes from './routes/model2';
+import model4Routes from './routes/model4';
 
 // VMS Simulators (Model 3 — departmental VMS heterogeneity demo)
 import vmsARouter from './federation/simulators/vmsA';
@@ -65,7 +66,8 @@ const generalRateLimit = rateLimit({
   legacyHeaders: false,
 });
 
-// ─── Stream Proxy (Mounted before rate limiter so HLS segments are not throttled) ───
+// Parse raw SDP bodies for WHEP signaling proxy (must be before stream routes)
+app.use('/api/stream', express.text({ type: 'application/sdp', limit: '64kb' }));
 app.use('/api/stream', streamProxyRoutes);
 
 app.use(generalRateLimit);
@@ -94,6 +96,9 @@ app.use('/api/federation', federationRoutes);
 
 // ─── Model 2 Unified Viewing & Metadata Analytics API ────────────────────────
 app.use('/api/model2', model2Routes);
+
+// ─── Model 4 Central VMS & AI Analytics API ──────────────────────────────────
+app.use('/api/model4', model4Routes);
 
 // Health check endpoint
 app.get('/health', (_req, res) => {

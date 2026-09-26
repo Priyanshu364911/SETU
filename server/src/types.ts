@@ -31,7 +31,11 @@ export type AuditAction =
   | 'MODEL2_VEHICLE_SEARCH'
   | 'MODEL2_ANPR_DETECT'
   | 'MODEL2_WATCHLIST_UPDATE'
-  | 'MODEL2_ALERT_ACTION';
+  | 'MODEL2_ALERT_ACTION'
+  | 'MODEL4_AI_EVENT'
+  | 'MODEL4_INTEGRATION_SYNC'
+  | 'MODEL4_INTEGRATION_QUERY'
+  | 'MODEL4_VAHAN_LOOKUP';
 
 export type Resource = 'cameras' | 'users' | 'audit_log' | 'departments' | 'onboarding';
 

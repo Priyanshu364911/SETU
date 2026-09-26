@@ -142,3 +142,43 @@ code, pre {
 .text-tertiary {
   color: var(--text-tertiary);
 }
+
+/* Button Utilities */
+.btn-sm {
+  padding: 4px 10px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+  border: var(--border-width) solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  background: var(--surface);
+  color: var(--text-secondary);
+}
+
+.btn-sm:active {
+  transform: scale(0.97);
+}
+
+.btn-sm--primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.btn-sm--primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btn-sm--ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+.btn-sm--ghost:hover {
+  background: var(--surface-alt);
+  color: var(--text-primary);
+}

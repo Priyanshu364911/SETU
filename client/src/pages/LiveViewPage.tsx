@@ -261,6 +261,7 @@ export default function LiveViewPage() {
                         cameraName={currentFeed.name}
                         vmsSystemId={currentFeed.vms_system_id}
                         streamUrl={currentFeed.stream_url}
+                        connectDelayMs={slotIndex * 350}
                       />
                     ) : (
                       <div className="lv-tile__empty">

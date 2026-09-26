@@ -22,8 +22,8 @@ router.get('/live-feeds', async (_req: Request, res: Response) => {
         c.name,
         c.department_id,
         c.district_id,
-        c.latitude,
-        c.longitude,
+        ST_Y(c.location::geometry) as latitude,
+        ST_X(c.location::geometry) as longitude,
         c.camera_type,
         c.status,
         b.vms_system_id,
@@ -49,8 +49,8 @@ router.get('/live-feeds', async (_req: Request, res: Response) => {
         name: r.name,
         department_id: r.department_id,
         district_id: r.district_id,
-        latitude: parseFloat(r.latitude),
-        longitude: parseFloat(r.longitude),
+        latitude: parseFloat(r.latitude) || 23.0225,
+        longitude: parseFloat(r.longitude) || 72.5714,
         camera_type: r.camera_type,
         status: r.status === 'Online' ? 'Online' : 'Online', // Active feeds
         vms_system_id: r.vms_system_id || 'gov-feeds',
@@ -287,8 +287,8 @@ router.get('/vehicle-search', async (req: Request, res: Response) => {
         c.name as camera_name,
         c.department_id,
         c.district_id,
-        c.latitude,
-        c.longitude
+        ST_Y(c.location::geometry) as latitude,
+        ST_X(c.location::geometry) as longitude
       FROM detection_events d
       LEFT JOIN cameras c ON d.camera_id = c.id
       WHERE d.plate_normalised ILIKE $1
@@ -313,8 +313,8 @@ router.get('/vehicle-search', async (req: Request, res: Response) => {
           c.name as camera_name,
           c.department_id,
           c.district_id,
-          c.latitude,
-          c.longitude
+          ST_Y(c.location::geometry) as latitude,
+          ST_X(c.location::geometry) as longitude
         FROM federated_events f
         LEFT JOIN cameras c ON f.camera_id = c.id
         WHERE f.event_type = 'PlateDetected'

@@ -21,6 +21,9 @@ import AlertsPage from './pages/AlertsPage';
 // Model 2 Viewing & Metadata Analytics pages
 import LiveViewPage from './pages/LiveViewPage';
 import VehicleSearchPage from './pages/VehicleSearchPage';
+// Model 4 Central VMS & AI Analytics Platform pages
+import CommandCentrePage from './pages/CommandCentrePage';
+import IntegrationsPage from './pages/IntegrationsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -45,6 +48,10 @@ function AppRoutes() {
         {/* Model 2 Live Operations */}
         <Route path="/live-view" element={<LiveViewPage />} />
         <Route path="/vehicle-search" element={<VehicleSearchPage />} />
+
+        {/* Model 4 Central VMS & AI Analytics Platform */}
+        <Route path="/command-centre" element={<CommandCentrePage />} />
+        <Route path="/integrations" element={<IntegrationsPage />} />
 
         <Route path="/cameras" element={<RegistryPage />} />
         <Route path="/onboarding" element={<OnboardingPage />} />

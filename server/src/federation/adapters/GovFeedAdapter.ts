@@ -43,20 +43,34 @@ export class GovFeedAdapter extends BaseAdapter {
 
   private baseUrl: string;   // https://cctv.corp8.cloud
   private rtspHost: string;  // 103.250.160.189
+  private email: string;     // registered email for POST /auth/login
   private apiToken: string;  // access password for POST /auth/login
   private sessionCookie = '';
   private feeds: SentinelFeedDescriptor[] = [];
+
+  // ─── Caches to eliminate redundant CDN round-trips ───────────────────────
+  private cachedKey: { data: Buffer; expiresAt: number } | null = null;
+  private manifestCache = new Map<string, { data: string; expiresAt: number }>();
+  private segmentCache = new Map<string, { data: Buffer; contentType: string; expiresAt: number }>();
+  private static readonly KEY_CACHE_TTL = 10 * 60 * 1000;     // 10 minutes
+  private static readonly MANIFEST_CACHE_TTL = 1500;           // 1.5 seconds
+  private static readonly SEGMENT_CACHE_TTL = 15 * 60 * 1000;  // 15 minutes
+
+  private readonly userAgent =
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
   constructor(
     systemId: string,
     baseUrl = '',
     staticFeeds: SentinelFeedDescriptor[] = [],
-    apiToken = ''
+    apiToken = '',
+    email = ''
   ) {
     super();
     this.id = systemId;
     this.baseUrl = baseUrl ? baseUrl.replace(/\/$/, '') : '';
-    this.apiToken = apiToken;
+    this.email = email || process.env.SENTINEL_EMAIL || 'nothingat18@gmail.com';
+    this.apiToken = apiToken || process.env.SENTINEL_API_TOKEN || '';
     this.feeds = staticFeeds;
 
     // Resolve direct-IP host from env or default
@@ -68,7 +82,7 @@ export class GovFeedAdapter extends BaseAdapter {
   }
 
   /**
-   * Authenticates against /auth/login using the access password.
+   * Authenticates against /auth/login using registered email and access password.
    * Stores the session cookie for subsequent requests.
    */
   private async ensureSession(): Promise<void> {
@@ -77,10 +91,17 @@ export class GovFeedAdapter extends BaseAdapter {
     if (!this.baseUrl || !this.apiToken) return;
 
     try {
+      const body = this.email
+        ? `email=${encodeURIComponent(this.email)}&password=${encodeURIComponent(this.apiToken)}`
+        : `password=${encodeURIComponent(this.apiToken)}`;
+
       const res = await fetch(`${this.baseUrl}/auth/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `password=${encodeURIComponent(this.apiToken)}`,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': this.userAgent,
+        },
+        body,
         redirect: 'manual', // don't follow — we just need the Set-Cookie
         signal: AbortSignal.timeout(8000),
       });
@@ -92,7 +113,6 @@ export class GovFeedAdapter extends BaseAdapter {
         this.sessionCookie = setCookie.split(';')[0].trim();
         console.log(`[GovFeedAdapter] Session established with Sentinel (${this.baseUrl})`);
       } else if (res.status === 200 || res.status === 302) {
-        // Some servers don't set a cookie on 200, try reading from body or assume ok
         console.log(`[GovFeedAdapter] Login status ${res.status}, no cookie returned — may be IP-whitelisted`);
       } else {
         console.warn(`[GovFeedAdapter] Login failed: HTTP ${res.status}`);
@@ -104,7 +124,13 @@ export class GovFeedAdapter extends BaseAdapter {
 
   /** Cookie headers for authenticated Sentinel CDN requests */
   private cookieHeaders(): Record<string, string> {
-    return this.sessionCookie ? { Cookie: this.sessionCookie } : {};
+    const headers: Record<string, string> = {
+      'User-Agent': this.userAgent,
+    };
+    if (this.sessionCookie) {
+      headers['Cookie'] = this.sessionCookie;
+    }
+    return headers;
   }
 
   async connect(): Promise<void> {
@@ -255,11 +281,18 @@ export class GovFeedAdapter extends BaseAdapter {
    */
   async getHlsManifest(externalId: string): Promise<string | null> {
     if (!this.baseUrl) return null;
+
+    // ── Check manifest cache first (1.5s TTL) ──
+    const cached = this.manifestCache.get(externalId);
+    if (cached && Date.now() < cached.expiresAt) {
+      return cached.data;
+    }
+
     await this.ensureSession();
 
     const fetchManifest = async () => {
       return fetch(`${this.baseUrl}/${externalId}/index.m3u8`, {
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(15000),
         headers: this.cookieHeaders(),
       });
     };
@@ -287,6 +320,28 @@ export class GovFeedAdapter extends BaseAdapter {
       '#EXT-X-KEY:METHOD=AES-128,URI="/api/stream/sentinel/enc.key"'
     );
 
+    // ── Store in cache ──
+    this.manifestCache.set(externalId, {
+      data: manifest,
+      expiresAt: Date.now() + GovFeedAdapter.MANIFEST_CACHE_TTL,
+    });
+
+    // ── Background pre-fetch first 2 segments so browser gets instant hit ──
+    try {
+      const segLines = manifest
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l.endsWith('.ts'))
+        .slice(0, 2);
+      for (const seg of segLines) {
+        if (!this.segmentCache.has(`${externalId}_${seg}`)) {
+          void this.getHlsSegment(externalId, seg).catch(() => {});
+        }
+      }
+    } catch {
+      // ignore prefetch errors
+    }
+
     return manifest;
   }
 
@@ -295,6 +350,12 @@ export class GovFeedAdapter extends BaseAdapter {
    */
   async getHlsKey(): Promise<Buffer | null> {
     if (!this.baseUrl) return null;
+
+    // ── Return cached key if still valid (5 min TTL) ──
+    if (this.cachedKey && Date.now() < this.cachedKey.expiresAt) {
+      return this.cachedKey.data;
+    }
+
     await this.ensureSession();
 
     const fetchKey = async () => {
@@ -317,19 +378,35 @@ export class GovFeedAdapter extends BaseAdapter {
     }
 
     const arrayBuffer = await res.arrayBuffer();
-    return Buffer.from(arrayBuffer);
+    const keyBuffer = Buffer.from(arrayBuffer);
+
+    // ── Cache the key ──
+    this.cachedKey = {
+      data: keyBuffer,
+      expiresAt: Date.now() + GovFeedAdapter.KEY_CACHE_TTL,
+    };
+
+    return keyBuffer;
   }
 
   /**
-   * Fetches a TS video segment from Sentinel CDN using backend session.
+   * Fetches a TS video segment from Sentinel CDN using backend session with RAM cache.
    */
   async getHlsSegment(externalId: string, segment: string): Promise<{ data: Buffer; contentType: string } | null> {
     if (!this.baseUrl) return null;
+
+    // ── 1. Check segment cache for instant (0ms) response ──
+    const cacheKey = `${externalId}_${segment}`;
+    const cached = this.segmentCache.get(cacheKey);
+    if (cached && Date.now() < cached.expiresAt) {
+      return { data: cached.data, contentType: cached.contentType };
+    }
+
     await this.ensureSession();
 
     const fetchSeg = async () => {
       return fetch(`${this.baseUrl}/${externalId}/${segment}`, {
-        signal: AbortSignal.timeout(12000),
+        signal: AbortSignal.timeout(25000),
         headers: this.cookieHeaders(),
       });
     };
@@ -348,7 +425,20 @@ export class GovFeedAdapter extends BaseAdapter {
 
     const contentType = res.headers.get('content-type') || 'video/mp2t';
     const arrayBuffer = await res.arrayBuffer();
-    return { data: Buffer.from(arrayBuffer), contentType };
+    const data = Buffer.from(arrayBuffer);
+    const result = { data, contentType };
+
+    // ── 2. Store in cache (LRU eviction: max 120 segments ~60MB) ──
+    if (this.segmentCache.size > 120) {
+      const oldestKey = this.segmentCache.keys().next().value;
+      if (oldestKey) this.segmentCache.delete(oldestKey);
+    }
+    this.segmentCache.set(cacheKey, {
+      ...result,
+      expiresAt: Date.now() + GovFeedAdapter.SEGMENT_CACHE_TTL,
+    });
+
+    return result;
   }
 
 

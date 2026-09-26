@@ -173,5 +173,55 @@ export const model2Api = {
   getStats: () => api.get('/model2/stats').then((r) => r.data),
 };
 
+// ─── Model 4 API helpers (Central VMS & AI Analytics Platform) ───────────────
+
+export const model4Api = {
+  /** Command centre dashboard overview */
+  getDashboard: () => api.get('/model4/dashboard').then((r) => r.data),
+
+  /** Paginated AI analytics event log */
+  getAIEvents: (params?: {
+    page?: number;
+    pageSize?: number;
+    event_type?: string;
+    camera_id?: string;
+    minConfidence?: number;
+  }) => api.get('/model4/ai/events', { params }).then((r) => r.data),
+
+  /** Ingest an AI event from client-side inference */
+  postAIEvent: (data: {
+    camera_id: string;
+    event_type: 'face_detection' | 'crowd_count' | 'vehicle_count' | 'anomaly' | 'anpr';
+    confidence?: number;
+    payload: Record<string, unknown>;
+    processing_ms?: number;
+    source?: 'live' | 'recorded' | 'inference';
+  }) => api.post('/model4/ai/events', data).then((r) => r.data),
+
+  /** Aggregated time-series analytics (hourly counts & top cameras) */
+  getAnalytics: () => api.get('/model4/ai/analytics').then((r) => r.data),
+
+  /** List external integrations with status & query counts */
+  getIntegrations: () => api.get('/model4/integrations').then((r) => r.data.data),
+
+  /** Trigger on-demand sync with external system */
+  syncIntegration: (id: string) => api.post(`/model4/integrations/${id}/sync`).then((r) => r.data),
+
+  /** VAHAN vehicle registry plate lookup */
+  vahanLookup: (plate: string) =>
+    api.get('/model4/integrations/vahan/lookup', { params: { plate } }).then((r) => r.data),
+
+  /** Recent integration query audit log */
+  getQueryLog: (limit = 50) =>
+    api.get('/model4/integrations/queries', { params: { limit } }).then((r) => r.data.data),
+
+  /** Real-time system metrics (CPU, GPU, memory, ingest rate) */
+  getSystemMetrics: () => api.get('/model4/system/metrics').then((r) => r.data),
+
+  /** Scalability gauge (current cameras vs 80,000 target) */
+  getCapacity: () => api.get('/model4/system/capacity').then((r) => r.data),
+};
+
 export default api;
+
 

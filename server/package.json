@@ -10,6 +10,7 @@
     "test:watch": "jest --watch",
     "migrate": "tsx src/scripts/migrate.ts",
     "seed": "tsx src/scripts/seed.ts",
+    "seed:model4": "tsx src/scripts/seed_model4.ts",
     "clean": "tsx src/scripts/clean.ts"
   },
   "keywords": [],
