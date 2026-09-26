@@ -17,11 +17,11 @@ export function rbacGuard(
 ): RBACDecision {
   switch (role) {
     case 'state_nodal_officer':
-      // SNO has full access to everything
+      // SNO has full access to everything including MANAGE (delete, admin ops)
       return { allowed: true };
 
     case 'auditor':
-      // Auditor can only read, no write operations
+      // Auditor can only read; no write, approve, or manage operations
       if (action === 'READ') {
         return { allowed: true };
       }
@@ -29,6 +29,7 @@ export function rbacGuard(
 
     case 'department_officer':
       // DO can read, write, and approve within their own department
+      // MANAGE (e.g. hard-delete) is restricted to SNO only
       if (['READ', 'WRITE', 'APPROVE'].includes(action)) {
         if (ownDeptId === null || ownDeptId === undefined) {
           return { allowed: false };
@@ -40,6 +41,7 @@ export function rbacGuard(
     case 'field_officer':
       // FO can only write (submit) cameras and read within their department
       // FO can also read audit_log, but only their own entries (enforced at route level)
+      // MANAGE is never allowed for FO
       if (resource === 'cameras' && action === 'WRITE') {
         if (ownDeptId === null || ownDeptId === undefined) {
           return { allowed: false };

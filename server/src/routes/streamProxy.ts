@@ -1,8 +1,12 @@
 import { Router, Request, Response } from 'express';
 import adapterRegistry from '../federation/adapters/AdapterRegistry';
 import { GovFeedAdapter } from '../federation/adapters/GovFeedAdapter';
+import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
+
+// All stream proxy routes require authentication (SEC-01)
+router.use(authMiddleware);
 
 // Helper to get GovFeedAdapter
 function getGovAdapter(): GovFeedAdapter | null {
@@ -108,8 +112,13 @@ router.get('/sentinel/:camId/:file', async (req: Request, res: Response) => {
 
 const SENTINEL_WHEP_HOST = process.env.SENTINEL_RTSP_HOST || '103.250.160.189';
 const SENTINEL_WHEP_PORT = 8889;
-const SENTINEL_EMAIL = process.env.SENTINEL_EMAIL || 'nothingat18@gmail.com';
-const SENTINEL_TOKEN = process.env.SENTINEL_API_TOKEN || 'JLDM-52CX-6C9R';
+const SENTINEL_EMAIL = process.env.SENTINEL_EMAIL || '';
+const SENTINEL_TOKEN = process.env.SENTINEL_API_TOKEN || '';
+
+// SEC-03: Warn at startup if stream credentials are not configured
+if (!process.env.SENTINEL_EMAIL || !process.env.SENTINEL_API_TOKEN) {
+  console.warn('[StreamProxy] WARNING: SENTINEL_EMAIL or SENTINEL_API_TOKEN env vars not set. WHEP proxy will fail to authenticate with upstream.');
+}
 
 /**
  * OPTIONS /api/stream/sentinel/:camId/whep — CORS preflight

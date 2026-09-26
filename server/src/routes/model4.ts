@@ -1,7 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
+import { requireRole } from '../middleware/rbac';
 import { query } from '../db';
 import auditService from '../services/AuditService';
+
+/** SEC-10: Only expose error detail in development. */
+const safeError = (err: any): string =>
+  process.env.NODE_ENV === 'production' ? 'Internal server error' : (err?.message ?? 'Unknown error');
+
 
 const router = Router();
 
@@ -116,7 +122,8 @@ router.get('/ai/events', async (req: Request, res: Response) => {
 
 // ─── POST /api/model4/ai/events ──────────────────────────────────────────────
 // Ingest an AI event from client-side TensorFlow.js inference
-router.post('/ai/events', async (req: Request, res: Response) => {
+// Restricted to department_officer and above to prevent FO abuse (SEC-06)
+router.post('/ai/events', requireRole('state_nodal_officer', 'department_officer'), async (req: Request, res: Response) => {
   try {
     const { camera_id, event_type, confidence, payload, processing_ms, source } = req.body;
 
@@ -159,7 +166,7 @@ router.post('/ai/events', async (req: Request, res: Response) => {
 
     res.status(201).json(result.rows[0]);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: safeError(err) });
   }
 });
 
@@ -267,7 +274,7 @@ router.post('/integrations/:id/sync', async (req: Request, res: Response) => {
 
     res.json({ message: `Sync complete for ${result.rows[0].name}`, data: result.rows[0] });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: safeError(err) });
   }
 });
 
@@ -348,7 +355,7 @@ router.get('/integrations/vahan/lookup', async (req: Request, res: Response) => 
       responseMs,
     });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: safeError(err) });
   }
 });
 

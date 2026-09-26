@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
+import { requireRole } from '../middleware/rbac';
 import { query } from '../db';
 import auditService from '../services/AuditService';
 import anprService from '../federation/services/AnprService';
@@ -201,8 +202,9 @@ router.get('/events/tagged', async (req: Request, res: Response) => {
 /**
  * POST /api/model2/anpr/detect
  * Detect & log ANPR event + trigger watchlist matching & Model 3 event bus.
+ * Restricted to department_officer and above (SEC-06)
  */
-router.post('/anpr/detect', async (req: Request, res: Response) => {
+router.post('/anpr/detect', requireRole('state_nodal_officer', 'department_officer'), async (req: Request, res: Response) => {
   try {
     const { camera_id, plate, confidence, snapshot_url, source } = req.body;
     if (!camera_id || !plate) {

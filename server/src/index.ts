@@ -31,6 +31,22 @@ import adapterRegistry from './federation/adapters/AdapterRegistry';
 import { query } from './db';
 
 
+// ─── Startup Environment Validation (SEC-09) ─────────────────────────────────
+const REQUIRED_ENV_VARS = ['JWT_SECRET', 'DATABASE_URL'];
+const RECOMMENDED_ENV_VARS = ['SENTINEL_API_TOKEN', 'SENTINEL_EMAIL', 'CORS_ORIGIN'];
+
+for (const v of REQUIRED_ENV_VARS) {
+  if (!process.env[v]) {
+    console.error(`FATAL: Required environment variable ${v} is not set. Refusing to start.`);
+    process.exit(1);
+  }
+}
+for (const v of RECOMMENDED_ENV_VARS) {
+  if (!process.env[v]) {
+    console.warn(`WARN: Recommended environment variable ${v} is not set. Some features may not work correctly.`);
+  }
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -50,9 +66,15 @@ app.use(helmet({
 }));
 
 
-// CORS configuration
+// CORS configuration — SEC-02: Restrict to known origin(s), not wildcard
+const allowedOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173';
 app.use(cors({
-  origin: true,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (same-origin, curl, mobile apps)
+    if (!origin) return callback(null, true);
+    if (allowedOrigin === '*' || origin === allowedOrigin) return callback(null, true);
+    callback(new Error(`CORS: Origin ${origin} not allowed`));
+  },
   credentials: true,
 }));
 
@@ -66,8 +88,18 @@ const generalRateLimit = rateLimit({
   legacyHeaders: false,
 });
 
+// Rate limiting — SEC-08: Tighter limit for stream proxy (prevent CDN hammering)
+const streamRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 120, // ~8 segments/min per camera, 15 cameras = 120
+  message: { error: 'Too many stream requests, please slow down' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Parse raw SDP bodies for WHEP signaling proxy (must be before stream routes)
 app.use('/api/stream', express.text({ type: 'application/sdp', limit: '64kb' }));
+app.use('/api/stream', streamRateLimit);
 app.use('/api/stream', streamProxyRoutes);
 
 app.use(generalRateLimit);
