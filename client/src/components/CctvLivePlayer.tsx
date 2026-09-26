@@ -142,10 +142,14 @@ export default function CctvLivePlayer({
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000);
 
+      // Read JWT for WHEP signaling auth (SEC-01 fix)
+      const token = localStorage.getItem('setu_token') || '';
+
       const res = await fetch(whepEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/sdp',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
         body: pc.localDescription?.sdp,
         signal: controller.signal,
@@ -183,6 +187,9 @@ export default function CctvLivePlayer({
     const video = videoRef.current;
     if (!video) return;
 
+    // Read JWT from localStorage so every HLS XHR is authenticated (SEC-01 fix)
+    const token = localStorage.getItem('setu_token') || '';
+
     if (Hls.isSupported()) {
       const hls = new Hls({
         enableWorker: true,
@@ -197,6 +204,12 @@ export default function CctvLivePlayer({
         manifestLoadingMaxRetry: 3,
         levelLoadingTimeOut: 15000,
         fragLoadingTimeOut: 25000,
+        // Inject Authorization header on every HLS XHR (manifest, segment, key)
+        xhrSetup: (xhr: XMLHttpRequest) => {
+          if (token) {
+            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+          }
+        },
       });
       hlsRef.current = hls;
 
